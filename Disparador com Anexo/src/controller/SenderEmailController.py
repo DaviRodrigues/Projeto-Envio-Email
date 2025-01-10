@@ -87,7 +87,7 @@ class SenderEmailController(SenderEmailModel):
             return True
 
 
-    def __init__(self, data_user: DataUserController, spreadsheet_path: str, html_path: str, email_send_quantity: int, send_interval: int, email_subject: str, email_title: str, email_message: str, whatsapp_redirect_number: str):
+    def __init__(self, data_user: DataUserController, spreadsheet_path: str, html_path: str, email_send_quantity: int, send_interval: int, email_subject: str, email_title: str, email_message: str, whatsapp_redirect_number: str, redirect_message: str):
         super().__init__(
             data_user=data_user,
             spreadsheet_path=spreadsheet_path,
@@ -98,6 +98,7 @@ class SenderEmailController(SenderEmailModel):
             email_title=email_title,
             email_message=email_message,
             whatsapp_redirect_number=whatsapp_redirect_number,
+            redirect_message=redirect_message,
             list_columns=None
         )
 
@@ -170,7 +171,7 @@ class SenderEmailController(SenderEmailModel):
             message_copy = message_copy.replace(f"{{{key.lower()}}}", value)
             title_copy = title_copy.replace(f"{{{key.lower()}}}", value)
                 
-        link_whatsapp_copy: str = f"https://api.whatsapp.com/send?phone={self.whatsapp_redirect_number}&text=Ol%C3%A1!%20Vim%20pelo%20email%20e%20gostaria%20de%20tirar%20algumas%20d%C3%BAvidas"
+        link_whatsapp_copy: str = f"https://api.whatsapp.com/send?phone={self.whatsapp_redirect_number}&text={self.redirect_message}"
 
         return message_copy, title_copy, link_whatsapp_copy
 
