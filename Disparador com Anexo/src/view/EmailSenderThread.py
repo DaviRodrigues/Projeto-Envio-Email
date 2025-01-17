@@ -41,15 +41,7 @@ class EmailSenderThread(QThread):
                 
                 SenderEmailController(
                     data_user = dataUserController, 
-                    spreadsheet_path = self.data["spreadsheet_path"],
-                    html_path = self.data["html_path"],
-                    email_send_quantity = self.data["email_send_quantity"],
-                    send_interval = self.data["send_interval"],
-                    email_subject = self.data["email_subject"],
-                    email_title = self.data["email_title"],
-                    email_message = self.data["email_message"],
-                    whatsapp_redirect_number = self.data["whatsapp_redirect_number"],
-                    redirect_message=self.data["redirect_message"]  
+                    data_send = self.data
                 ).send_emails(self.log_signal)
                 
             self.stop()

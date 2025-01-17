@@ -88,37 +88,21 @@ class SenderEmailController(SenderEmailModel):
     def __init__(
         self, 
         data_user: DataUserController, 
-        spreadsheet_path: str, 
-        html_path: str, 
-        email_send_quantity: int, 
-        send_interval: int, 
-        email_subject: str, 
-        email_title: str, 
-        email_message: str, 
-        whatsapp_redirect_number: str, 
-        redirect_message: str
+        data_send: dict,
     ) -> None:
         
         super().__init__(
             data_user=data_user,
-            spreadsheet_path=spreadsheet_path,
-            html_path=html_path,
-            email_send_quantity=email_send_quantity,
-            send_interval=send_interval,
-            email_subject=email_subject,
-            email_title=email_title,
-            email_message=email_message,
-            whatsapp_redirect_number=whatsapp_redirect_number,
-            redirect_message=redirect_message,
+            data_send=data_send,
             list_columns=None
         )
 
 
     def read_emails(self) -> tuple[list[str], pd.DataFrame, list[str]]:
-        if SenderEmailController.is_file_locked(self.spreadsheet_path):
+        if SenderEmailController.is_file_locked(self.data_send["spreadsheet_path"]):
             raise Exception("O arquivo de planilha está sendo utilizado por outro processo, feche-a e tente novamente.")
         
-        df_emails: pd.DataFrame = pd.read_excel(self.spreadsheet_path, converters={"STATUS": str})
+        df_emails: pd.DataFrame = pd.read_excel(self.data_send["spreadsheet_path"], converters={"STATUS": str})
 
         self.list_columns = df_emails.columns.tolist()
         variables_columns: list[str] = list(filter(
@@ -132,7 +116,7 @@ class SenderEmailController(SenderEmailModel):
             df_no_duplicates: pd.DataFrame = df_emails.drop_duplicates(
                 subset=self.list_columns, keep='first')
 
-            df_no_duplicates.to_excel(self.spreadsheet_path, index=False)
+            df_no_duplicates.to_excel(self.data_send["spreadsheet_path"], index=False)
             
             colum_emails: list[str] = df_no_duplicates["E-mail"].tolist()
 
@@ -175,14 +159,14 @@ class SenderEmailController(SenderEmailModel):
 
 
     def update_message(self, columns_values: dict[str, str]) -> tuple[str, str, str]:
-        message_copy: str = self.email_message
-        title_copy: str = self.email_title
+        message_copy: str = self.data_send["email_message"]
+        title_copy: str = self.data_send["email_title"]
         
         for key, value in columns_values.items():
             message_copy = message_copy.replace(f"{{{key.lower()}}}", value)
             title_copy = title_copy.replace(f"{{{key.lower()}}}", value)
                 
-        link_whatsapp_copy: str = f"https://api.whatsapp.com/send?phone={self.whatsapp_redirect_number}&text={self.redirect_message}"
+        link_whatsapp_copy: str = f"https://api.whatsapp.com/send?phone={self.data_send['whatsapp_redirect_number']}&text={self.data_send['redirect_message']}"
 
         return message_copy, title_copy, link_whatsapp_copy
 
@@ -207,7 +191,7 @@ class SenderEmailController(SenderEmailModel):
         server_smtp, port_smtp = self.type_verify_email()
 
         msg: MIMEMultipart = MIMEMultipart('alternative')
-        msg['Subject'] = self.email_subject
+        msg['Subject'] = self.data_send["email_subject"]
         msg['From'] = self.data_user.email
         msg['To'] = destination_email
         msg.attach(MIMEText(copy_body_html, 'html', 'utf-8'))
@@ -244,13 +228,13 @@ class SenderEmailController(SenderEmailModel):
         if not validator:
             message: str = (
                 f"Erro ao enviar email para {destination_email} às {datetime.now().strftime('%d/%m/%Y-%H:%M:%S')}\n" 
-                f"\nTotal de emails enviados: {current_index} de {len(destination_emails)} Erro: {error}\n"
+                f"\nTotal de emails enviados: {current_index + 1} de {len(destination_emails)} Erro: {error}\n"
             )
             Log.write_error(self.data_user.email, message)
             return message
 
         message: str = (
-            f"Email enviado para {destination_email} às {datetime.now().strftime('%d/%m/%Y-%H:%M:%S')}\nTotal de emails enviados: {current_index} de {len(destination_emails)} "
+            f"Email enviado para {destination_email} às {datetime.now().strftime('%d/%m/%Y-%H:%M:%S')}\nTotal de emails enviados: {current_index + 1} de {len(destination_emails)} "
             f"Intervalo de envio: {interval_send_email} segundos\n"
         )
         Log.write_success(self.data_user.email, message)
@@ -287,7 +271,7 @@ class SenderEmailController(SenderEmailModel):
     ) -> None:
         
         df_emails.loc[current_index, "STATUS"] = 'ERRO'
-        df_emails.to_excel(self.spreadsheet_path, index=False)
+        df_emails.to_excel(self.data_send["spreadsheet_path"], index=False)
         message_error: str = self.write_on_console_and_txt(destination_email, destination_emails, False, current_index, error)
         log_signal.emit(message_error)
         
@@ -303,12 +287,12 @@ class SenderEmailController(SenderEmailModel):
         variables_columns: list[str]
     ) -> None:
         
-        random_interval: int = SenderEmailController.wait_random_send_email(self.send_interval)
+        random_interval: int = SenderEmailController.wait_random_send_email(self.data_send["send_interval"])
         
         try:
             self.pre_process_emails(df_emails, destination_email, body_html_original, variables_columns, current_index)
             df_emails.loc[current_index, "STATUS"] = 'ENVIADO'
-            df_emails.to_excel(self.spreadsheet_path, index=False)
+            df_emails.to_excel(self.data_send["spreadsheet_path"], index=False)
             message_success: str = self.write_on_console_and_txt(destination_email, destination_emails, True, current_index, None, random_interval)
             log_signal.emit(message_success)
             time.sleep(random_interval)
@@ -326,18 +310,17 @@ class SenderEmailController(SenderEmailModel):
     
 
     def send_emails(self, log_signal: pyqtBoundSignal) -> None:
-        body_html_original: str = SenderEmailController.load_html(self.html_path)
+        body_html_original: str = SenderEmailController.load_html(self.data_send["html_path"])
         destination_emails, df_emails, variables_columns = self.read_emails()
         
         start_index: int = self.verify_last_index_and_start_index(df_emails)
         destination_emails = destination_emails[start_index:]
         
-        if not destination_emails or not start_index:
+        if not destination_emails or start_index is None:
             raise Exception("Nenhum e-mail encontrado na planilha para envio. Cheque a coluna de E-mail ou STATUS.")
 
         for current_index, destination_email in enumerate(destination_emails):
-            current_index += 1
-            if (current_index) > self.email_send_quantity:
+            if (current_index) > self.data_send["email_send_quantity"]:
                 break
             self.process_email_sending(
                 df_emails,
