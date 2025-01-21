@@ -285,7 +285,7 @@ class SenderEmailController(SenderEmailModel):
         log_signal: pyqtBoundSignal,
         body_html_original: str,
         variables_columns: list[str]
-    ) -> None:
+    ) -> bool:
         
         random_interval: int = SenderEmailController.wait_random_send_email(self.data_send["send_interval"])
         
@@ -298,15 +298,19 @@ class SenderEmailController(SenderEmailModel):
             time.sleep(random_interval)
         except SMTPAuthenticationError as sae:
             message_error: str = f"Erro de autenticação. Verifique o e-mail e senha do aplicativo., ou contate o suporte. {sae}"
-            return self.error_env(df_emails, destination_email, destination_emails, current_index, message_error, log_signal) 
+            self.error_env(df_emails, destination_email, destination_emails, current_index, message_error, log_signal)
+            return False
         except SMTPRecipientsRefused:
             message_error: str = f"O e-mail {destination_email} foi recusado pelo servidor SMTP. Tente iniciar os envios novamente ou feche o programa."
-            return self.error_env(df_emails, destination_email, destination_emails, current_index, message_error, log_signal)
+            self.error_env(df_emails, destination_email, destination_emails, current_index, message_error, log_signal)
+            return True
         except (SMTPConnectError, SMTPServerDisconnected):
             message_error: str = "Conexão ou Falha com o servidor SMTP. Tente iniciar os envios novamente ou feche o programa."
-            return self.error_env(df_emails, destination_email, destination_emails, current_index, message_error, log_signal)
+            self.error_env(df_emails, destination_email, destination_emails, current_index, message_error, log_signal)
+            return False
         except Exception as error:
-            return self.error_env(df_emails, destination_email, destination_emails, current_index, error, log_signal)
+            self.error_env(df_emails, destination_email, destination_emails, current_index, error, log_signal)
+            return False
     
 
     def send_emails(self, log_signal: pyqtBoundSignal) -> None:
@@ -320,9 +324,10 @@ class SenderEmailController(SenderEmailModel):
             raise Exception("Nenhum e-mail encontrado na planilha para envio. Cheque a coluna de E-mail ou STATUS.")
 
         for current_index, destination_email in enumerate(destination_emails):
-            if (current_index) > self.data_send["email_send_quantity"]:
+            if (current_index + 1) > self.data_send["email_send_quantity"]:
                 break
-            self.process_email_sending(
+            
+            flag_status: bool = self.process_email_sending(
                 df_emails,
                 destination_email,
                 destination_emails,
@@ -332,4 +337,5 @@ class SenderEmailController(SenderEmailModel):
                 variables_columns
             )
             
-
+            if not flag_status:
+                break
