@@ -77,14 +77,15 @@ class EmailMainView(QWidget):
 
         self.numero_envios_label = QLabel('Número de Envios:')  # Cria um rótulo para o campo de número de envios
         self.numero_envios_edit = QLineEdit()  # Cria um campo de entrada para o número de envios
-        self.numero_envios_edit.setMaxLength(3)  # Define o comprimento máximo do campo de número de envios
-        self.numero_envios_edit.setValidator(QIntValidator())  # Define um validador para permitir apenas números inteiros
+        self.numero_envios_edit.setMaxLength(10)
+        self.numero_envios_edit.setValidator(QIntValidator())
         self.numero_envios_edit.setPlaceholderText('Nº')  # Define um texto de espaço reservado para o campo de número de envios
 
         self.intervalo_envio_label = QLabel('Intervalo entre Envios (segundos):')  # Cria um rótulo para o campo de intervalo entre envios
         self.intervalo_envio_edit = QLineEdit()  # Cria um campo de entrada para o intervalo entre envios
+        self.intervalo_envio_edit.setMaxLength(10)
+        self.intervalo_envio_edit.setValidator(QIntValidator())
         self.intervalo_envio_edit.setPlaceholderText('10')  # Define um texto de espaço reservado para o campo de intervalo entre envios
-        self.intervalo_envio_edit.setValidator(QIntValidator(10, 15))  # Define um validador para permitir apenas números inteiros maiores ou iguais a 30
 
         self.assunto_label = QLabel('Assunto:')  # Cria um rótulo para o campo de assunto
         self.assunto_edit = QLineEdit()  # Cria um campo de entrada para o assunto
@@ -306,8 +307,8 @@ class EmailMainView(QWidget):
         
         for _, item in enumerate(lista_desabilitar_ou_habilitar):
             item.setEnabled(enabled)
-            
-    
+       
+       
     def validateRedirectNumber(self) -> None:
         text: str = self.redirecionar_whatsapp_edit.text()
 
@@ -316,9 +317,9 @@ class EmailMainView(QWidget):
         if len(text) > 13:
             text = text[:13]
 
-        self.redirecionar_whatsapp_edit.setText(text)
+        self.redirecionar_whatsapp_edit.setText(text)   
             
-        
+
     def choose_planilha(self) -> None:
         # Abre um diálogo para escolher a planilha
         planilha_path, _ = QFileDialog.getOpenFileName(self, 'Escolher Planilha', '', 'Excel Files (*.xlsx *.xls *.csv *.xlsm)')
