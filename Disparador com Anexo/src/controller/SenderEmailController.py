@@ -296,6 +296,7 @@ class SenderEmailController(SenderEmailModel):
             message_success: str = self.write_on_console_and_txt(destination_email, destination_emails, True, current_index, None, random_interval)
             log_signal.emit(message_success)
             time.sleep(random_interval)
+            return True
         except SMTPAuthenticationError as sae:
             message_error: str = f"Erro de autenticação. Verifique o e-mail e senha do aplicativo., ou contate o suporte. {sae}"
             self.error_env(df_emails, destination_email, destination_emails, current_index, message_error, log_signal)
